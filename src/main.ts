@@ -36,7 +36,7 @@ function playerName(): string | null {
   return typed;
 }
 
-const COFFEE_URL = 'https://buymeacoffee.com/REPLACE_ME';
+const COFFEE_URL = 'https://spoo.me/coffee';
 
 /** Pixel-style button in the same look as the original PLAY art: dark fill, 2px border. */
 function button(scene: Phaser.Scene, x: number, y: number, w: number, label: string, color: string, onClick: () => void) {
