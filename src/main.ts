@@ -74,7 +74,7 @@ class Start extends Phaser.Scene {
     this.add.sprite(200, 232, 'logo0').setDisplaySize(113, 113).play('logo');
     this.add.text(200, 317, `High Score : ${bestScore(0, readBest())}`, { fontFamily: FONT, fontSize: '22px', color: '#ffffff' }).setOrigin(0.5);
     this.add.text(200, 355, 'tap / space to turn', { fontFamily: FONT, fontSize: '12px', color: '#9a8fd8' }).setOrigin(0.5);
-    this.add.text(8, 482, 'made by syafiq', { fontFamily: FONT, fontSize: '10px', color: '#9a8fd8' }).setOrigin(0, 0.5);
+    this.add.text(8, 482, 'made by syafiq', { fontFamily: FONT, fontSize: '10px', color: '#ffffff' }).setOrigin(0, 0.5);
     button(this, 255, 482, 84, 'TOP 10', '#ffffff', () => this.scene.start('leaderboard')); // menu music keeps playing there
     button(this, 348, 482, 88, 'DONATE', '#ffdd00', () => window.open(COFFEE_URL, '_blank', 'noopener'));
 
