@@ -8,6 +8,31 @@ const BEST_KEY = 'hiscore'; // same key the Construct 2 version used, so an old 
 const readBest = () => { try { return localStorage.getItem(BEST_KEY); } catch { return null; } };
 const writeBest = (n: number) => { try { localStorage.setItem(BEST_KEY, String(n)); } catch { /* not saved */ } };
 
+// Online leaderboard: a Vercel function in api/scores.js. Not available under plain `npm run dev` (use `vercel dev`).
+type Row = { name: string; score: number };
+const NAME_KEY = 'playerName';
+
+async function fetchTop(): Promise<Row[]> {
+  const res = await fetch('/api/scores');
+  if (!res.ok) throw new Error(`leaderboard ${res.status}`);
+  return (await res.json()).top;
+}
+
+async function submitScore(name: string, score: number): Promise<number> {
+  const res = await fetch('/api/scores', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name, score }) });
+  if (!res.ok) throw new Error(`leaderboard ${res.status}`);
+  return (await res.json()).rank;
+}
+
+/** Saved name, or ask once. Returns null if the player cancels. */
+function playerName(): string | null {
+  try { const saved = localStorage.getItem(NAME_KEY); if (saved) return saved; } catch { /* ask instead */ }
+  const typed = window.prompt('New best! Your name for the leaderboard (max 12 letters):')?.trim().slice(0, 12);
+  if (!typed) return null;
+  try { localStorage.setItem(NAME_KEY, typed); } catch { /* ask again next time */ }
+  return typed;
+}
+
 class Boot extends Phaser.Scene {
   constructor() { super('boot'); }
 
@@ -32,9 +57,13 @@ class Start extends Phaser.Scene {
     this.add.image(0, 0, 'title').setOrigin(0);
     this.add.sprite(200, 262, 'logo0').setDisplaySize(113, 113).play('logo');
     this.add.text(200, 367, `High Score : ${bestScore(0, readBest())}`, { fontFamily: FONT, fontSize: '22px', color: '#ffffff' }).setOrigin(0.5);
-    this.add.text(200, 482, 'tap / space to turn', { fontFamily: FONT, fontSize: '12px', color: '#9a8fd8' }).setOrigin(0.5);
+    this.add.text(200, 478, 'tap / space to turn', { fontFamily: FONT, fontSize: '12px', color: '#9a8fd8' }).setOrigin(0.5);
+    this.add.text(8, 494, 'made by syafiq', { fontFamily: FONT, fontSize: '10px', color: '#9a8fd8' }).setOrigin(0, 1);
+    this.add.text(392, 494, 'TOP 10', { fontFamily: FONT, fontSize: '12px', color: '#ffffff', padding: { x: 6, y: 6 } })
+      .setOrigin(1, 1).setInteractive({ useHandCursor: true })
+      .once('pointerdown', () => this.scene.start('leaderboard')); // music keeps playing on the leaderboard screen
 
-    this.sound.play('menumusic', { loop: true });
+    if (!this.sound.get('menumusic')?.isPlaying) this.sound.play('menumusic', { loop: true });
     const go = () => { this.sound.stopAll(); this.scene.start('game'); };
     this.add.image(200, 437, 'play').setInteractive({ useHandCursor: true }).once('pointerdown', go);
     this.input.keyboard?.once('keydown-SPACE', go);
@@ -123,13 +152,59 @@ class Game extends Phaser.Scene {
       this.add.text(60, 823, `Hi-Score : ${best}${this.score === best && this.score > 0 ? '  NEW!' : ''}`, style).setDepth(21),
     ];
     const menu = this.add.image(200, 882, 'menu').setDepth(21);
-    const targets = [250, 278, 321];
+    const rankText = this.add.text(60, 866, '', { ...style, fontSize: '14px', color: '#e94bd6' }).setDepth(21);
+    panel.push(rankText);
+    const targets = [250, 278, 321, 362];
     panel.forEach((o, i) => this.tweens.add({ targets: o, y: targets[i], duration: 500, ease: 'Cubic.Out' }));
     this.tweens.add({ targets: menu, y: 430, duration: 650, ease: 'Cubic.Out' });
+
+    if (this.score > 0 && this.score === best) {
+      // Wait for the panel to slide in; the name prompt pauses the game while it is open.
+      this.time.delayedCall(700, () => {
+        const name = playerName();
+        if (!name) return;
+        rankText.setText('Saving online...');
+        submitScore(name, this.score)
+          .then((rank) => rankText.scene && rankText.setText(`World rank #${rank}`))
+          .catch(() => rankText.scene && rankText.setText('Offline: score not sent'));
+      });
+    }
 
     const back = () => this.scene.start('start');
     menu.setInteractive({ useHandCursor: true }).once('pointerdown', back);
     this.time.delayedCall(600, () => this.input.keyboard?.once('keydown-SPACE', back)); // delay so a held space doesn't skip the screen
+  }
+}
+
+class Leaderboard extends Phaser.Scene {
+  constructor() { super('leaderboard'); }
+
+  create() {
+    this.add.image(200, 250, 'bg');
+    this.add.text(200, 60, 'TOP 10', { fontFamily: FONT, fontSize: '40px', color: '#e94bd6' }).setOrigin(0.5);
+    const style = { fontFamily: FONT, fontSize: '18px', color: '#ffffff' };
+    const status = this.add.text(200, 220, 'Loading...', style).setOrigin(0.5);
+
+    fetchTop()
+      .then((rows) => {
+        if (!status.scene) return; // player already left this screen
+        status.setText(rows.length ? '' : 'No scores yet. Be the first!');
+        let me: string | null = null;
+        try { me = localStorage.getItem(NAME_KEY); } catch { /* no highlight */ }
+        rows.forEach((r, i) => {
+          const y = 110 + i * 28;
+          const color = r.name === me ? '#ffd84a' : '#ffffff';
+          this.add.text(50, y, `${i + 1}.`, { ...style, color });
+          this.add.text(95, y, r.name, { ...style, color });
+          this.add.text(350, y, String(r.score), { ...style, color }).setOrigin(1, 0);
+        });
+      })
+      .catch(() => status.scene && status.setText('Leaderboard offline'));
+
+    const back = () => this.scene.start('start');
+    this.add.image(200, 430, 'menu').setInteractive({ useHandCursor: true }).once('pointerdown', back);
+    this.input.keyboard?.once('keydown-SPACE', back);
+    this.input.keyboard?.once('keydown-ESC', back);
   }
 }
 
@@ -141,5 +216,5 @@ new Phaser.Game({
   backgroundColor: '#0b0a24',
   pixelArt: true,
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
-  scene: [Boot, Start, Game],
+  scene: [Boot, Start, Game, Leaderboard],
 });

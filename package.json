@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build --base=./",
     "preview": "vite preview",
-    "test": "node --test --experimental-strip-types src/logic.test.ts"
+    "test": "node --test --experimental-strip-types src/logic.test.ts api/scores.test.js"
   },
   "dependencies": {
     "phaser": "3.90.0"
