@@ -11,6 +11,9 @@ const writeBest = (n: number) => { try { localStorage.setItem(BEST_KEY, String(n
 // Online leaderboard: a Vercel function in api/scores.js. Not available under plain `npm run dev` (use `vercel dev`).
 type Row = { name: string; score: number };
 const NAME_KEY = 'playerName';
+const SENT_KEY = 'sentBest'; // best score already sent online, separate from the local best so old local bests still get uploaded
+const readSent = () => { try { return Number(localStorage.getItem(SENT_KEY)) || 0; } catch { return 0; } };
+const writeSent = (n: number) => { try { localStorage.setItem(SENT_KEY, String(n)); } catch { /* resend next time */ } };
 
 async function fetchTop(): Promise<Row[]> {
   const res = await fetch('/api/scores');
@@ -27,7 +30,7 @@ async function submitScore(name: string, score: number): Promise<number> {
 /** Saved name, or ask once. Returns null if the player cancels. */
 function playerName(): string | null {
   try { const saved = localStorage.getItem(NAME_KEY); if (saved) return saved; } catch { /* ask instead */ }
-  const typed = window.prompt('New best! Your name for the leaderboard (max 12 letters):')?.trim().slice(0, 12);
+  const typed = window.prompt('Your name for the online leaderboard (max 12 letters):')?.trim().slice(0, 12);
   if (!typed) return null;
   try { localStorage.setItem(NAME_KEY, typed); } catch { /* ask again next time */ }
   return typed;
@@ -158,14 +161,14 @@ class Game extends Phaser.Scene {
     panel.forEach((o, i) => this.tweens.add({ targets: o, y: targets[i], duration: 500, ease: 'Cubic.Out' }));
     this.tweens.add({ targets: menu, y: 430, duration: 650, ease: 'Cubic.Out' });
 
-    if (this.score > 0 && this.score === best) {
+    if (this.score > readSent()) {
       // Wait for the panel to slide in; the name prompt pauses the game while it is open.
       this.time.delayedCall(700, () => {
         const name = playerName();
         if (!name) return;
         rankText.setText('Saving online...');
         submitScore(name, this.score)
-          .then((rank) => rankText.scene && rankText.setText(`World rank #${rank}`))
+          .then((rank) => { writeSent(this.score); if (rankText.scene) rankText.setText(`World rank #${rank}`); })
           .catch(() => rankText.scene && rankText.setText('Offline: score not sent'));
       });
     }
