@@ -71,16 +71,17 @@ class Start extends Phaser.Scene {
 
   create() {
     this.add.image(0, 0, 'title').setOrigin(0);
-    this.add.sprite(200, 262, 'logo0').setDisplaySize(113, 113).play('logo');
-    this.add.text(200, 347, `High Score : ${bestScore(0, readBest())}`, { fontFamily: FONT, fontSize: '22px', color: '#ffffff' }).setOrigin(0.5);
-    this.add.text(200, 388, 'tap / space to turn', { fontFamily: FONT, fontSize: '12px', color: '#9a8fd8' }).setOrigin(0.5);
+    this.add.sprite(200, 232, 'logo0').setDisplaySize(113, 113).play('logo');
+    this.add.text(200, 317, `High Score : ${bestScore(0, readBest())}`, { fontFamily: FONT, fontSize: '22px', color: '#ffffff' }).setOrigin(0.5);
+    this.add.text(200, 355, 'tap / space to turn', { fontFamily: FONT, fontSize: '12px', color: '#9a8fd8' }).setOrigin(0.5);
     this.add.text(8, 482, 'made by syafiq', { fontFamily: FONT, fontSize: '10px', color: '#9a8fd8' }).setOrigin(0, 0.5);
     button(this, 255, 482, 84, 'TOP 10', '#ffffff', () => this.scene.start('leaderboard')); // menu music keeps playing there
     button(this, 348, 482, 88, 'DONATE', '#ffdd00', () => window.open(COFFEE_URL, '_blank', 'noopener'));
 
     if (!this.sound.get('menumusic')?.isPlaying) this.sound.play('menumusic', { loop: true });
     const go = () => { this.sound.stopAll(); this.scene.start('game'); };
-    this.add.image(200, 437, 'play').setInteractive({ useHandCursor: true }).once('pointerdown', go);
+    this.add.rectangle(200, 405, 170, 75, 0x1b0d33); // the dark box that used to be painted into title.png
+    this.add.image(200, 405, 'play').setInteractive({ useHandCursor: true }).once('pointerdown', go);
     this.input.keyboard?.once('keydown-SPACE', go);
     this.input.keyboard?.once('keydown-ENTER', go);
   }
