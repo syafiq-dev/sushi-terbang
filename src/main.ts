@@ -36,6 +36,19 @@ function playerName(): string | null {
   return typed;
 }
 
+const COFFEE_URL = 'https://buymeacoffee.com/REPLACE_ME';
+
+/** Pixel-style button in the same look as the original PLAY art: dark fill, 2px border. */
+function button(scene: Phaser.Scene, x: number, y: number, w: number, label: string, color: string, onClick: () => void) {
+  const fill = 0x14113a;
+  const box = scene.add.rectangle(x, y, w, 30, fill).setStrokeStyle(2, Phaser.Display.Color.HexStringToColor(color).color);
+  scene.add.text(x, y + 1, label, { fontFamily: FONT, fontSize: '12px', color }).setOrigin(0.5);
+  box.setInteractive({ useHandCursor: true })
+    .on('pointerover', () => box.setFillStyle(0x2a2470))
+    .on('pointerout', () => box.setFillStyle(fill))
+    .on('pointerup', onClick); // pointerup, not down: browsers only allow window.open from a click
+}
+
 class Boot extends Phaser.Scene {
   constructor() { super('boot'); }
 
@@ -59,12 +72,11 @@ class Start extends Phaser.Scene {
   create() {
     this.add.image(0, 0, 'title').setOrigin(0);
     this.add.sprite(200, 262, 'logo0').setDisplaySize(113, 113).play('logo');
-    this.add.text(200, 367, `High Score : ${bestScore(0, readBest())}`, { fontFamily: FONT, fontSize: '22px', color: '#ffffff' }).setOrigin(0.5);
-    this.add.text(200, 478, 'tap / space to turn', { fontFamily: FONT, fontSize: '12px', color: '#9a8fd8' }).setOrigin(0.5);
-    this.add.text(8, 494, 'made by syafiq', { fontFamily: FONT, fontSize: '10px', color: '#9a8fd8' }).setOrigin(0, 1);
-    this.add.text(392, 494, 'TOP 10', { fontFamily: FONT, fontSize: '12px', color: '#ffffff', padding: { x: 6, y: 6 } })
-      .setOrigin(1, 1).setInteractive({ useHandCursor: true })
-      .once('pointerdown', () => this.scene.start('leaderboard')); // music keeps playing on the leaderboard screen
+    this.add.text(200, 347, `High Score : ${bestScore(0, readBest())}`, { fontFamily: FONT, fontSize: '22px', color: '#ffffff' }).setOrigin(0.5);
+    this.add.text(200, 388, 'tap / space to turn', { fontFamily: FONT, fontSize: '12px', color: '#9a8fd8' }).setOrigin(0.5);
+    this.add.text(8, 482, 'made by syafiq', { fontFamily: FONT, fontSize: '10px', color: '#9a8fd8' }).setOrigin(0, 0.5);
+    button(this, 255, 482, 84, 'TOP 10', '#ffffff', () => this.scene.start('leaderboard')); // menu music keeps playing there
+    button(this, 348, 482, 88, 'DONATE', '#ffdd00', () => window.open(COFFEE_URL, '_blank', 'noopener'));
 
     if (!this.sound.get('menumusic')?.isPlaying) this.sound.play('menumusic', { loop: true });
     const go = () => { this.sound.stopAll(); this.scene.start('game'); };
